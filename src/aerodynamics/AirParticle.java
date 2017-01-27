@@ -14,7 +14,7 @@ public class AirParticle {
         this.ys = ys;
         
         T = 2000;
-        m = 0.000001;
+        m = 0.0001;
     }
     
     public double v(){
@@ -34,9 +34,9 @@ public class AirParticle {
             return true;
         
         try{
-            Simulation.metaArray[(int)(x/Simulation.metaSize) + 2][(int)(y/Simulation.metaSize) + 2].add(this);
+            Simulation.getMeta(x, y).add(this);
         }catch(ArrayIndexOutOfBoundsException e){
-            System.out.println("AirParticle.move: out of array");
+            System.out.println("AirParticle.move: " + e.getMessage());
         }
         
         return false;
@@ -58,11 +58,11 @@ public class AirParticle {
                 return false;
             dx = (p.m * this.x - p.x)/(p.m - 1) - this.x;   //correct position to not account for this particle
             dy = (p.m * this.y - p.y)/(p.m - 1) - this.y;
-            pressure--;
+            pressure -= m;
         }
         
         //distance
-        double vLength = Math.sqrt(dx * dx + dy * dy);
+        double vLength = Math.hypot(dx, dy);
         
         if(vLength == 0)
             return false;
@@ -75,34 +75,33 @@ public class AirParticle {
         dy /= vLength;// * (vLength + 0.25) * (vLength + 0.25);
         
         
-        this.xs -= dx * time * 200 * pressure;
-        this.ys -= dy * time * 200 * pressure;
+        this.xs -= dx * time * pressure;
+        this.ys -= dy * time * pressure;
         
         
 //        this.t -= Math.sqrt(square(dx * time * p.t) + square(dy * time * p.t));
 //        this.t = (this.t + p.t) / 2;
 //        p.t = this.t;
-        //interact with lines
-        //again to reduce leaking
-        for(Line l: p.lines){
-            if(intersects(l, Simulation.deltaTime()))
-                if(l.isVoid)
-                    return true;//remove
-                else
-                    collideWithLine(l.x2 - l.x1, l.y2 - l.y1);
-        }//for lines
         
+        //interact with lines
+        //twice to reduce leaking
+        if(containsThis){
+            for(Line l: p.lines){
+                if(intersects(l, Simulation.deltaTime()))
+                    if(l.isVoid)
+                        return true;//remove
+                    else
+                        collideWithLine(l.x2 - l.x1, l.y2 - l.y1);
+            }//for lines
+            
+        }
         return false;
     }//interact
-    
-//    private double square(double x){
-//        return x * x;
-//    }//square
-    
     
     
     public void collideWithLine(double lineX, double lineY){
         double lLength = Math.hypot(lineX, lineY);
+        
         
         lineX /= lLength;
         lineY /= lLength;
@@ -144,7 +143,7 @@ public class AirParticle {
                 
                 double m = plXl / pXl;
                 
-                if(m >= 0 && m <= 1){
+                if(0 <= m && m <= 1){
                     return true;
                 }
             }

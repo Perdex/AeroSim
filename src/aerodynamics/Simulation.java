@@ -9,11 +9,11 @@ import java.util.ConcurrentModificationException;
 
 public class Simulation extends Thread{
     
-    public static final int metaSize = 3;
-    public static ArrayList<Line> lines = new ArrayList<Line>();
+    public static final int metaCellSize = 3; //in pixels
+    public static ArrayList<Line> lines = new ArrayList<>();
     public static ArrayList<AirParticle> particles; 
-    public static PressurePoint[][] metaArray = 
-            new PressurePoint[Draw.width / metaSize + 4][Draw.height / metaSize + 4];
+    private static final PressurePoint[][] metaArray = 
+            new PressurePoint[Draw.width / metaCellSize + 4][Draw.height / metaCellSize + 4];
 //    public static ArrayList<ActiveSensor> activeSensors = new ArrayList<ActiveSensor>();
 //    public static ArrayList<PassiveSensor> passiveSensors = new ArrayList<PassiveSensor>();
     public static int frame = 0;
@@ -35,25 +35,6 @@ public class Simulation extends Thread{
     @Override
     public void run(){
         
-        for(int i = 0; i < Draw.height / metaSize + 4; i++){        //add external pressure
-            metaArray[0][i] = new PressurePoint(2, 0, i);
-            metaArray[1][i] = new PressurePoint(2, 1, i);
-            metaArray[Draw.width / metaSize + 2][i] = new PressurePoint(2, Draw.width / metaSize + 2, i);
-            metaArray[Draw.width / metaSize + 3][i] = new PressurePoint(2, Draw.width / metaSize + 3, i);
-        }
-        for(int i = 0; i < Draw.width / metaSize + 4; i++){
-            metaArray[i][0] = new PressurePoint(2, i, 0);
-            metaArray[i][1] = new PressurePoint(2, i, 1);
-            metaArray[i][Draw.height / metaSize + 2] = new PressurePoint(2, i, Draw.height / metaSize + 2);
-            metaArray[i][Draw.height / metaSize + 3] = new PressurePoint(2, i, Draw.height / metaSize + 3);
-        }
-        
-        for(int i = 2; i < Draw.width / metaSize + 3; i++){
-            for(int j = 2; j < Draw.height / metaSize + 3; j++){
-                metaArray[i][j] = new PressurePoint();
-            }
-        }
-        
         
         while(draw.isEnabled()){
             while(running){
@@ -63,10 +44,10 @@ public class Simulation extends Thread{
                 
                 frame++;
                 
-                toRemove = new ArrayList<Integer>();
+                toRemove = new ArrayList<>();
                 
                 if(timeDebug){
-                    System.out.print("1: " + (int)(System.nanoTime() - time3)/100000);
+                    System.out.print("(" + (int)(System.nanoTime() - time3)/1000);
                     time3 = System.nanoTime();
                 }
                 
@@ -75,16 +56,13 @@ public class Simulation extends Thread{
                     avgV = 0;
                     //move all particles at once
                     for(int i = 0; i < particles.size(); i++){
-                        AirParticle p = particles.get(i);
-                        
-                        avgV += p.v();
-                        
-                        p.move();
-                        
+                        avgV += particles.get(i).v();
+                        if(particles.get(i).move())//run particle
+                            toRemove.add(i);
                     }
                     
                     if(timeDebug){
-                        System.out.print(", 2: " + (int)(System.nanoTime() - time3)/100000);
+                        System.out.print(", " + (int)(System.nanoTime() - time3)/1000);
                         time3 = System.nanoTime();
                     }
 
@@ -100,21 +78,22 @@ public class Simulation extends Thread{
                     toRemove = new ArrayList<Integer>();
                     
                     if(timeDebug){
-                        System.out.print(", 3: " + (int)(System.nanoTime() - time3)/100000);
+                        System.out.print(", " + (int)(System.nanoTime() - time3)/1000);
                         time3 = System.nanoTime();
                     }
                     
                     //run other stuff after checking if particle should be removed
-                    particles.stream().forEach((p) -> {
+                    for(int i = 0; i < particles.size(); i++){
                         try{
-                            runParticle(p);//run particle
+                            if(runParticle(particles.get(i)))//run particle
+                                toRemove.add(i);
                         }catch(Exception e){
-                            //System.out.println(e + " at Simulation.runParticle");
+                            System.out.println(e + " at Simulation.runParticle");
                         }
-                    });
+                    }
                     
                     if(timeDebug){
-                        System.out.print(", 4: " + (int)(System.nanoTime() - time3)/100000);
+                        System.out.print(", " + (int)(System.nanoTime() - time3)/1000);
                         time3 = System.nanoTime();
                     }
                     
@@ -126,7 +105,7 @@ public class Simulation extends Thread{
                     }
                     
                     if(timeDebug){
-                        System.out.println(", 5: " + (int)(System.nanoTime() - time3)/100000);
+                        System.out.print(", " + (int)(System.nanoTime() - time3)/1000);
                         time3 = System.nanoTime();
                     }
                     
@@ -143,7 +122,7 @@ public class Simulation extends Thread{
                     spawnParticles((int)(deltaTime() * toSpawn));
                 
                 if(timeDebug){
-                    System.out.println("6: " + (int)(System.nanoTime() - time3)/100000);
+                    System.out.println(", " + (int)(System.nanoTime() - time3)/1000 + ")µs");
                     time3 = System.nanoTime();
                 }
                 
@@ -235,9 +214,9 @@ public class Simulation extends Thread{
                 if(i == 0 && j == 0)
                     zeroes = true;
                 
-                int x = (int)(p.x / metaSize) + i;
-                int y = (int)(p.y / metaSize) + j;
-                if(x >= 0 && x < Draw.width/metaSize && y >= 0 && y < Draw.height/metaSize)
+                int x = (int)(p.x / metaCellSize) + i;
+                int y = (int)(p.y / metaCellSize) + j;
+                if(x >= 0 && x < Draw.width/metaCellSize && y >= 0 && y < Draw.height/metaCellSize)
                     if(p.interact(metaArray[x + 2][y + 2], deltaTime(), zeroes))
                         return true;
                 
@@ -255,6 +234,26 @@ public class Simulation extends Thread{
         reset();
         this.draw = draw;
         
+        //add external pressure: two lines of points all around
+        for(int i = 0; i < Draw.height / metaCellSize + 4; i++){
+            metaArray[0][i] = new PressurePoint(2, 0, i);
+            metaArray[1][i] = new PressurePoint(2, 1, i);
+            metaArray[Draw.width / metaCellSize + 2][i] = new PressurePoint(2, Draw.width / metaCellSize + 2, i);
+            metaArray[Draw.width / metaCellSize + 3][i] = new PressurePoint(2, Draw.width / metaCellSize + 3, i);
+        }
+        for(int i = 0; i < Draw.width / metaCellSize + 4; i++){
+            metaArray[i][0] = new PressurePoint(2, i, 0);
+            metaArray[i][1] = new PressurePoint(2, i, 1);
+            metaArray[i][Draw.height / metaCellSize + 2] = new PressurePoint(2, i, Draw.height / metaCellSize + 2);
+            metaArray[i][Draw.height / metaCellSize + 3] = new PressurePoint(2, i, Draw.height / metaCellSize + 3);
+        }
+        
+        for(int i = 2; i < Draw.width / metaCellSize + 3; i++)
+            for(int j = 2; j < Draw.height / metaCellSize + 3; j++)
+                metaArray[i][j] = new PressurePoint();
+            
+        
+        
         //init lines
         lines = new ArrayList<Line>();
         Line.click(400, 300);
@@ -270,6 +269,22 @@ public class Simulation extends Thread{
         lines.get(i).remove();
         lines.remove(i);
     }//removeLine
+    
+    public static void addToMeta(PressurePoint p, double x, double y){
+        metaArray[(int)(x / metaCellSize) + 2][(int)(y / metaCellSize) + 2] = p;
+    }
+    public static PressurePoint getMeta(double x, double y){
+        return metaArray[(int)(x / metaCellSize) + 2][(int)(y / metaCellSize) + 2];
+    }
+    public static PressurePoint getMetaInt(int i, int j){
+        return metaArray[i][j];
+    }
+    public static int metaWidth(){
+        return metaArray.length;
+    }
+    public static int metaHeight(){
+        return metaArray[0].length;
+    }
     
     public void reset(){
         //init particles

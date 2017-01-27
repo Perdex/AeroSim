@@ -2,14 +2,13 @@ package aerodynamics.tools;
 
 import aerodynamics.Draw;
 import aerodynamics.Simulation;
+import java.util.ArrayList;
 
 
 public class Line {
-    static int lineMetaSize = 3;
     public static boolean drawing = false, snap = false, symmetry = true;
     public static double lastx = 0, lasty = 0;
     public static int gridSize = 10;
-    public static Line[][] metaLine = new Line[Draw.width / lineMetaSize + 4][Draw.height / lineMetaSize + 4];
     
     public final boolean isVoid, isSymmetric;
     public double x1, y1, x2, y2;
@@ -73,14 +72,14 @@ public class Line {
             }
             //add line
             if(unique){
-                boolean line = false;
+                boolean isVoid = false;
                 if(Draw.currentTool == Tool.voidLine)
-                    line = true;
+                    isVoid = true;
                 
-                add(new Line(x, y, line));
+                add(new Line(x, y, isVoid));
                 
                 if(symmetry)
-                    add(new Line(x, Draw.height - y, lastx, Draw.height - lasty, line));
+                    add(new Line(x, Draw.height - y, lastx, Draw.height - lasty, isVoid));
             
             }
         }else
@@ -98,24 +97,87 @@ public class Line {
     
     public void remove(){
         //remove from metaArray
+        for(point p: getPoints(this))
+            Simulation.getMetaInt(p.x, p.y).remove(this);
     }//remove
     
     public static void add(Line l){
         Simulation.lines.add(l);
         
+        for(point p: getPoints(l))
+            Simulation.getMetaInt(p.x, p.y).add(l);
+        
+    }//add
+    
+    //returns the meta-array indeces that are close to this line
+    private static ArrayList<point> getPoints(Line l){
         double lineLength = l.getLength();
         
-         //add to metaArray
-        double x = l.x1 / Simulation.metaSize, y =  l.y1 / Simulation.metaSize;
-        double dx = (l.x2 - l.x1) / Simulation.metaSize, dy = (l.y2 - l.y1) / Simulation.metaSize;
+        //x, y will increment from 0 to dx, dy in steps of metasize
+        double x = 0, y = 0;
+        double dx = l.x2 - l.x1, dy = l.y2 - l.y1;
+        dx /= lineLength;
+        dy /= lineLength;
         
-        while(Math.hypot(x, y) < lineLength){
-            if((int)x < Simulation.metaArray.length && (int)y < Simulation.metaArray[0].length)
-                if((int)x >= 0 && (int)y >= 0)
-                    Simulation.metaArray[(int)x][(int)y].add(l);
+        int x0 = (int)Math.round(l.x1/Simulation.metaCellSize);
+        int y0 = (int)Math.round(l.y1/Simulation.metaCellSize);
+        
+        ArrayList<point> points = new ArrayList<>();
+        
+        while(sq(x) + sq(y) < sq(lineLength / Simulation.metaCellSize)){
+            
+            
+            for(int i = -1; i < 2; i++){
+                for(int j = -1; j < 2; j++){
+
+                    //make the indices
+                    int xi = (int)Math.round(x) + x0 + i;
+                    int yi = (int)Math.round(y) + y0 + j;
+
+                    if(xi < 0 || xi >= Simulation.metaWidth() ||
+                            yi < 0 || yi >= Simulation.metaHeight())
+                        continue;
+
+                    point p = new point(xi, yi);
+                    if(!points.contains(p))
+                        points.add(p);
+                    
+                }
+            }
+            
             x += dx;
             y += dy;
         }
+        return points;
+    }
+    
+    private static class point{
+        final int x, y;
+        public point(int x, int y){
+            this.x = x;
+            this.y = y;
+        }
         
-    }//add
+        @Override
+        public boolean equals(Object other){
+            if(!(other instanceof point))
+                return false;
+            point o = (point)other;
+            return x == o.x && y == o.y;
+        }
+
+        @Override
+        public int hashCode(){
+            int hash = 7;
+            hash = 67 * hash + this.x;
+            hash = 67 * hash + this.y;
+            return hash;
+        }
+        
+    }
+    
+    private static double sq(double d){
+        return d * d;
+    }
 }
+

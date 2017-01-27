@@ -140,7 +140,7 @@ public class Draw extends JPanel implements KeyListener, MouseListener, MouseWhe
                     try{
                         AirParticle p = Simulation.particles.get(i);
 
-                        int shade = (int)((p.T - tempCutOff) / 5);
+                        int shade = (int)((p.v() - tempCutOff) *5);
                         if(shade > 255)
                             shade = 255;
                         if(shade > 0){
@@ -162,6 +162,19 @@ public class Draw extends JPanel implements KeyListener, MouseListener, MouseWhe
             
             g.drawImage(toolBar, width - 32, 2, null);
             
+//            //draw linemetadebug
+//            for(int i = 0; i < Simulation.metaWidth(); i++){
+//                for(int j = 0; j < Simulation.metaHeight(); j++){
+//                    
+//                    if(!Simulation.getMetaInt(i, j).lines.isEmpty()){
+//                        g.setColor(new Color(0, Math.min(255, 80 * Simulation.getMetaInt(i, j).lines.size()), 0));
+//                        g.fillRect(i * Simulation.metaCellSize, 
+//                                j * Simulation.metaCellSize, 
+//                                Simulation.metaCellSize, Simulation.metaCellSize);
+//                    }
+//                    
+//                }
+//            }
             
             //draw lines
             for(Line l: Simulation.lines){
@@ -173,17 +186,6 @@ public class Draw extends JPanel implements KeyListener, MouseListener, MouseWhe
                 drawLine(g, l.x1, l.y1, l.x2, l.y2);
             }
             
-            //draw linedebug
-            g.setColor(Color.green);
-            for(int i = 0; i < Simulation.metaArray.length; i++){
-                for(int j = 0; j < Simulation.metaArray[0].length; j++){
-                    if(!Simulation.metaArray[i][j].lines.isEmpty())
-                        g.fillRect(i * Simulation.metaSize, 
-                                j * Simulation.metaSize, 
-                                Simulation.metaSize, Simulation.metaSize);
-                    
-                }
-            }
             
             
             //draw currently drawing line

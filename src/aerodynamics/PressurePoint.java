@@ -13,8 +13,8 @@ public class PressurePoint {
     
     public PressurePoint(int mass, int x, int y){
         m = mass;
-        this.x = x * Simulation.metaSize;
-        this.y = y * Simulation.metaSize;
+        this.x = x * Simulation.metaCellSize;
+        this.y = y * Simulation.metaCellSize;
         T = 280;
         
         lines = new ArrayList<Line>();
@@ -22,7 +22,7 @@ public class PressurePoint {
     
     public PressurePoint(){
         m = 0;
-        T = 0;
+        T = 280;
         lines = new ArrayList<Line>();
     }
     
@@ -36,6 +36,7 @@ public class PressurePoint {
     
     public void add(AirParticle particle){
         
+        //reset this area
         if(frame != Simulation.frame || m == 0){
             x = particle.x;
             y = particle.y;
@@ -49,6 +50,7 @@ public class PressurePoint {
             return;
         }
         
+        //add particle
         x += (particle.x - x) / m;
         y += (particle.y - y) / m;
         
@@ -63,5 +65,8 @@ public class PressurePoint {
     
     public void add(Line l){
         lines.add(l);
+    }
+    public void remove(Line l){
+        lines.remove(l);
     }
 }
